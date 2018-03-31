@@ -6,12 +6,18 @@
 //  Copyright © 2018 Alex Kustov. All rights reserved.
 //
 
+
+#include <cstdlib>
 #include <iostream>
-#include <fstream>
-#include <string>
-#include <stdlib.h>
-#include <math.h>
 #include <pthread.h>
+#include <string>
+#include <stdio.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <fstream>
+
 
 #define SUCCESS                 0
 #define ERROR_CREATE_THREAD     -11
@@ -19,6 +25,7 @@
 #define ERROR_BARRIER_DESTROY   -13
 #define ERROR_JOIN_THREAD       -14
 #define ERROR_FILE_OPEN         -15
+#define ERROR_FILE				-16
 #define NUM_THREAD              11  // 10 потоков + main
 
 pthread_barrier_t barrier;
@@ -44,7 +51,7 @@ struct cryptParam
 
 void* keyGen(void * params)
 {
-    keygenParameters *param = (keygenParameters *)params;
+    keygenParameters *param = reinterpret_cast<keygenParameters *>(params);
     size_t a = param->a;
     size_t m = param->m;
     size_t c = param->c;
@@ -65,7 +72,7 @@ void* crypt(void * cryptParametrs)
 {
     int status = 0;
 
-    cryptParam* param = (cryptParam*)cryptParametrs;
+    cryptParam* param = reinterpret_cast<cryptParam*>(cryptParametrs);
     unsigned char* msg = param->msg;
     unsigned char* key = param->key;
     unsigned char* outputText = param->outputText;
@@ -93,28 +100,41 @@ void* crypt(void * cryptParametrs)
 
 int main(int argc, const char * argv[])
 {
-    std::string input;
-    std::string path;
-    cout << "Input path :" << std::endl;
-    cin >> path;
-    std::ifstream file (path);
-
-    // Проверяем, подключился ли файл или нет
-    if(!file){
-        std::cout << "Error with file";
-        exit(ERROR_FILE_OPEN);
+	int inputFile = open(argv[1], O_RDONLY, 0666);
+	
+    if (inputFile == -1)
+	{
+        std::cout << "error with file";
+        exit(ERROR_FILE);
     }
 
-    // Читаем файл и записываем все содержимое в строку input
-    getline(file, input);
-    file.close();
-
-    size_t inputSize = input.length();
+    int inputSize = lseek(inputFile, 0, SEEK_END);
+	
+    if(inputSize == -1)
+	{
+        std::cout << "error with file";
+        exit(ERROR_FILE);
+    }
 
     keygenParameters keyParam;
     unsigned char* key = new unsigned char[inputSize];
     unsigned char* outputText = new unsigned char[inputSize];
+	unsigned char* msg = new unsigned char[inputSize];
 
+	if(lseek(inputFile, 0, SEEK_SET) == -1)
+	{
+        std::cout << "error with file";
+        exit(ERROR_FILE);
+    }
+	
+    inputSize = read(inputFile, msg, inputSize);
+	
+	if(inputSize == -1)
+	{
+        std::cout << "error with file";
+        exit(ERROR_FILE);
+    }
+	
     // Задаем параметры генерации ключа
     keyParam.keySize = inputSize;
     keyParam.a = 32;
@@ -152,26 +172,11 @@ int main(int argc, const char * argv[])
         cryptParametrs->key = key;
         cryptParametrs->size = inputSize;
         cryptParametrs->outputText = outputText;
-        cryptParametrs->msg = (unsigned char*)input.c_str();
+        cryptParametrs->msg = msg;
 
-        if(i == 0)
-        {
-            cryptParametrs->downIndex = 0;
-        }
-        else
-        {
-            cryptParametrs->downIndex = inputSize / 10 * i;
-        }
-
-        if(i == 9)
-        {
-            cryptParametrs->topIndex = inputSize;
-        }
-        else
-        {
-            cryptParametrs->topIndex = inputSize / 10 * (i + 1);
-        }
-        
+		if(i == 0) cryptParametrs->downIndex = 0; else cryptParametrs->downIndex = size / 10 * i;
+        if(i == 9) cryptParametrs->topIndex = size; else cryptParametrs->topIndex = size / 10 * (i + 1);
+		
         pthread_create(&cryptThread[i], NULL, crypt, cryptParametrs);
     }
 
@@ -187,11 +192,12 @@ int main(int argc, const char * argv[])
     std::ofstream output("output.txt");
     output << outputText;
     output.close();
-
-    std::cout << "mes";
+	
+	close(inputFile);
     
     delete[] key;
     delete[] outputText;
+	delete[] msg;
     
     return SUCCESS;
 }
