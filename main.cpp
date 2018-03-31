@@ -94,7 +94,10 @@ void* crypt(void * cryptParametrs)
 int main(int argc, const char * argv[])
 {
     std::string input;
-    std::ifstream file ("/home/alex/Desktop/verman/verman/text.txt");
+    std::string path;
+    cout << "Input path :" << std::endl;
+    cin >> path;
+    std::ifstream file (path);
 
     // Проверяем, подключился ли файл или нет
     if(!file){
@@ -168,7 +171,7 @@ int main(int argc, const char * argv[])
         {
             cryptParametrs->topIndex = inputSize / 10 * (i + 1);
         }
-
+        
         pthread_create(&cryptThread[i], NULL, crypt, cryptParametrs);
     }
 
@@ -177,15 +180,18 @@ int main(int argc, const char * argv[])
         pthread_barrier_destroy(&barrier);
     else if(status != 0)
     {
-        std::cout << "promblem with pthread_barrier_destroy";
+        std::cout << "problem with pthread_barrier_destroy";
         exit(ERROR_BARRIER_DESTROY);
     }
-
-    std::ofstream output("/home/alex/Desktop/verman/verman/output.txt");
+    
+    std::ofstream output("output.txt");
     output << outputText;
     output.close();
 
     std::cout << "mes";
-
+    
+    delete[] key;
+    delete[] outputText;
+    
     return SUCCESS;
 }
