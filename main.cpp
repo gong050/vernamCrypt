@@ -100,7 +100,7 @@ void* crypt(void * cryptParametrs)
 
 int main(int argc, const char * argv[])
 {
-	int inputFile = open(argv[1], O_RDONLY, 0666);
+    int inputFile = open(argv[1], O_RDONLY, 0666);
 	
     if (inputFile == -1)
 	{
@@ -119,18 +119,18 @@ int main(int argc, const char * argv[])
     keygenParameters keyParam;
     unsigned char* key = new unsigned char[inputSize];
     unsigned char* outputText = new unsigned char[inputSize];
-	unsigned char* msg = new unsigned char[inputSize];
+    unsigned char* msg = new unsigned char[inputSize];
 
-	if(lseek(inputFile, 0, SEEK_SET) == -1)
-	{
+    if(lseek(inputFile, 0, SEEK_SET) == -1)
+    {
         std::cout << "error with file";
         exit(ERROR_FILE);
     }
 	
     inputSize = read(inputFile, msg, inputSize);
 	
-	if(inputSize == -1)
-	{
+    if(inputSize == -1)
+    {
         std::cout << "error with file";
         exit(ERROR_FILE);
     }
@@ -174,7 +174,7 @@ int main(int argc, const char * argv[])
         cryptParametrs->outputText = outputText;
         cryptParametrs->msg = msg;
 
-		if(i == 0) cryptParametrs->downIndex = 0; else cryptParametrs->downIndex = size / 10 * i;
+    	if(i == 0) cryptParametrs->downIndex = 0; else cryptParametrs->downIndex = size / 10 * i;
         if(i == 9) cryptParametrs->topIndex = size; else cryptParametrs->topIndex = size / 10 * (i + 1);
 		
         pthread_create(&cryptThread[i], NULL, crypt, cryptParametrs);
@@ -193,11 +193,11 @@ int main(int argc, const char * argv[])
     output << outputText;
     output.close();
 	
-	close(inputFile);
+    close(inputFile);
     
     delete[] key;
     delete[] outputText;
-	delete[] msg;
+    delete[] msg;
     
     return SUCCESS;
 }
